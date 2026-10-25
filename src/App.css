@@ -143,3 +143,16 @@
   .document-title { font-size: 13px; }
   .editor-footer span:last-child { display: none; }
 }
+
+/* Evaluation 2: a simple app-wide dark theme. The document page stays white for readability. */
+.app-shell.dark { background: #141a24; color: #e5e7eb; --border: #303846; --muted: #aab3c2; --text: #e5e7eb; --soft: #202938; }
+.dark .topbar, .dark .toolbar, .dark .editor-footer, .dark .right-panel { background: #1c2430; color: #e5e7eb; }
+.dark .document-title, .dark .comment-input-wrap textarea { color: #e5e7eb; background: transparent; }
+.dark .secondary-btn { background: #252f3d; color: #e5e7eb; border-color: #3b4656; }
+.dark .tool-btn, .dark .format-select, .dark .tab { color: #c3ccda; }
+.dark .tool-btn:hover, .dark .format-select:hover { background: #303b4b; }
+.dark .comment-card { background: #202938; border-color: #3b4656; }
+.dark .comment-top strong, .dark .activity-item strong, .dark .user-row strong, .dark .comment-card p, .dark .activity-item p { color: #d5dbe5; }
+.dark .panel-header, .dark .presence { border-color: #303846; }
+.dark .activity-item { border-color: #303846; }
+@media (max-width: 950px) { .theme-btn, .export-btn { display: inline-flex; } }
