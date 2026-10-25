@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Bold, Italic, Underline, Undo2, Redo2, List, ListOrdered,
   Link as LinkIcon, MessageSquare, History, Share2, Save,
-  ChevronDown, X, Send, Copy, Check, FileText
+  ChevronDown, X, Send, Copy, Check, FileText, Download, Moon, Sun
 } from "lucide-react";
 import "./App.css";
 
@@ -24,22 +24,8 @@ const users = [
   { name: "Vani", avatar: "V", online: true, role: "Viewer" }
 ];
 
-function ToolbarButton({ children, onClick, title }) {
-  return <button className="tool-btn" onClick={onClick} title={title}>{children}</button>;
-}
-
-function App() {
-  const [title, setTitle] = useState("My Collaborative Document");
-  const [saved, setSaved] = useState(true);
-  const [comments, setComments] = useState(initialComments);
-  const [commentText, setCommentText] = useState("");
-  const [showComments, setShowComments] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showShare, setShowShare] = useState(false);
-  const [permission, setPermission] = useState("Editor");
-  const [copied, setCopied] = useState(false);
-  const [versions, setVersions] = useState(initialVersions);
-  const [editorHtml, setEditorHtml] = useState(`
+const STORAGE_KEY = "collabedit-evaluation-2";
+const DEFAULT_HTML = `
     <h1>Welcome to CollabEdit</h1>
     <p>This is a <strong>frontend-only prototype</strong> of a collaborative rich-text editor.</p>
     <p>Start writing here. The interface demonstrates document editing, user presence, comments, version history and sharing controls.</p>
@@ -49,7 +35,46 @@ function App() {
       <li>Show multiple users working together</li>
       <li>Keep the UI ready for future real-time collaboration</li>
     </ul>
-  `);
+  `;
+function loadProject() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; }
+  catch { return {}; }
+}
+
+function ToolbarButton({ children, onClick, title }) {
+  return <button className="tool-btn" onClick={onClick} title={title}>{children}</button>;
+}
+
+function App() {
+  const [initialProject] = useState(loadProject);
+  const [title, setTitle] = useState(() => initialProject.title || "My Collaborative Document");
+  const [saved, setSaved] = useState(true);
+  const [comments, setComments] = useState(() => initialProject.comments || initialComments);
+  const [commentText, setCommentText] = useState("");
+  const [showComments, setShowComments] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [permission, setPermission] = useState("Editor");
+  const [copied, setCopied] = useState(false);
+  const [versions, setVersions] = useState(() => initialProject.versions || initialVersions);
+  const [editorHtml, setEditorHtml] = useState(() => initialProject.editorHtml || DEFAULT_HTML);
+  const [theme, setTheme] = useState(() => localStorage.getItem("collabedit-theme") || "light");
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("collabedit-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    setSaved(false);
+    const timer = window.setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, editorHtml, comments, versions }));
+        setSaved(true);
+      } catch { setSaved(false); }
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [title, editorHtml, comments, versions]);
 
   const wordCount = useMemo(() => {
     const text = editorHtml.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
@@ -85,13 +110,22 @@ function App() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const exportDocument = () => {
+    const safeTitle = (title || "collabedit-document").replace(/[\\/:*?"<>|]+/g, "-");
+    const file = new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle.replace(/&/g, "&amp;")}</title></head><body>${editorHtml}</body></html>`], { type: "text/html" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url; link.download = `${safeTitle}.html`; link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleEditorInput = (e) => {
     setEditorHtml(e.currentTarget.innerHTML);
     setSaved(false);
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${theme}`}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-icon"><FileText size={20} /></div>
@@ -124,6 +158,10 @@ function App() {
           <button className="secondary-btn" onClick={() => setShowHistory(true)}>
             <History size={16} /> History
           </button>
+          <button className="secondary-btn theme-btn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
+            {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            {theme === "light" ? "Dark mode" : "Light mode"}
+          </button>
           <button className="primary-btn" onClick={() => setShowShare(true)}>
             <Share2 size={16} /> Share
           </button>
@@ -154,6 +192,7 @@ function App() {
             <ToolbarButton title="Undo" onClick={() => format("undo")}><Undo2 size={17} /></ToolbarButton>
             <ToolbarButton title="Redo" onClick={() => format("redo")}><Redo2 size={17} /></ToolbarButton>
             <button className="save-btn" onClick={saveVersion}><Save size={16} /> Save</button>
+            <button className="secondary-btn export-btn" onClick={exportDocument} title="Download this document as HTML"><Download size={15} /> Export</button>
           </div>
 
           <div className="document-wrap">
